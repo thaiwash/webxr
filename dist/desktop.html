@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<title>desktop</title>
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+		<meta http-equiv="Content-Security-Policy" content="default-src *; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline' 'unsafe-eval' http://www.google.com">
+	</head>
+	<body>
+
+		<!-- script src="js/vr/HelioWebXRPolyfill.js"></script -->
+<script>
+
+	var time
+
+			function getData() {
+				var xhr = new XMLHttpRequest();
+				xhr.onreadystatechange = function() {
+				    if (xhr.readyState === 4){
+				       console.log(xhr.responseText);
+							 console.log(time - (new Date()).getTime())
+				    }
+				};
+
+				xhr.open('GET', 'https://192.168.43.47:8443/screenshot');
+				xhr.send();
+				time = (new Date()).getTime()
+			}
+</script>
+
+
+		<script type="module">
+
+			import * as THREE from './build/three.module.js';
+			import { OrbitControls } from './jsm/controls/OrbitControls.js';
+			import { VRButton } from './jsm/webxr/VRButton.js';
+
+			var container;
+			var camera, scene, renderer;
+			var controller1, controller2;
+
+			var raycaster, intersected = [];
+			var tempMatrix = new THREE.Matrix4();
+
+			var controls, group, texture;
+			var canvas, ctx
+
+			init();
+			animate();
+
+
+
+
+			function createCanvas() {
+				canvas = document.createElement('canvas'),
+				ctx = canvas.getContext('2d');
+
+				canvas.width = 1920;
+				canvas.height = 1080;
+
+
+				return canvas
+			}
+
+			function updateScreen() {
+				  /*var img = new Image();
+				  img.onload = function() {
+				    ctx.drawImage(img, 0, 0);
+						texture.needsUpdate = true
+				  };
+				  img.src = 'screenshots/screenshot'+counter+'.bmp';*/
+
+
+						var xhr = new XMLHttpRequest();
+						xhr.onreadystatechange = function() {
+								if (xhr.readyState === 4){
+									 console.log(xhr.responseText);
+									 var pixels = new Uint8Array( xhr.responseText )
+									 console.log(xhr.responseText.charCodeAt(0))
+									 console.log(xhr.responseText.charCodeAt(0) & 0xff )
+									 //var oMyBlob = new Blob(xhr.responseText, {type : 'Buffer'});
+									 //console.log(oMyBlob.slice(0,1))
+
+									 createImageFrom(xhr.responseText)
+								}
+						};
+
+						xhr.overrideMimeType('text\/plain; charset=x-user-defined');
+						xhr.open('GET', 'https://192.168.43.47:8443/screenshot');
+						xhr.send();
+
+			}
+
+			function createImageFrom(res) {
+
+					var id = ctx.createImageData(1920,1080); // only do this once per page
+					var d  = id.data;                        // only do this once per page
+
+					d[0]   = 255;
+					d[1]   = 255;
+					d[2]   = 255;
+					d[3]   = 255;
+
+					var counter = 0;
+					var v;
+				for (var y = 0; y < 1080; y ++) {
+					for (var x = 0; x < 1920; x ++) {
+					  v = (res.charCodeAt(counter) & 0xff )
+
+						d[counter] = v
+						counter ++
+						v = (res.charCodeAt(counter) & 0xff )
+						d[counter] = v
+						counter ++
+						v = (res.charCodeAt(counter) & 0xff )
+						d[counter] = v
+						counter ++
+						v = (res.charCodeAt(counter) & 0xff )
+						d[counter] = v
+						counter ++
+					}
+				}
+
+					ctx.putImageData( id, 0, 0 );
+					texture.needsUpdate = true
+					console.log("here")
+			}
+
+
+			setInterval(function() {
+				updateScreen()
+			}, 1000)
+
+
+			function init() {
+
+				container = document.createElement( 'div' );
+				document.body.appendChild( container );
+
+				scene = new THREE.Scene();
+				scene.background = new THREE.Color( 0x808080 );
+
+				camera = new THREE.PerspectiveCamera( 50, window.innerWidth / window.innerHeight, 0.1, 10 );
+				camera.position.set( 0, 1.6, 3 );
+
+				controls = new OrbitControls( camera, container );
+				controls.target.set( 0, 1.6, 0 );
+				controls.update();
+
+				var geometry = new THREE.PlaneBufferGeometry( 4, 4 );
+				var material = new THREE.MeshStandardMaterial( {
+					color: 0xeeeeee,
+					roughness: 1.0,
+					metalness: 0.0
+				} );
+				var floor = new THREE.Mesh( geometry, material );
+				floor.rotation.x = - Math.PI / 2;
+				floor.receiveShadow = true;
+				scene.add( floor );
+
+				scene.add( new THREE.HemisphereLight( 0x808080, 0x606060 ) );
+
+				var light = new THREE.DirectionalLight( 0xffffff );
+				light.position.set( 0, 6, 0 );
+				light.castShadow = true;
+				light.shadow.camera.top = 2;
+				light.shadow.camera.bottom = - 2;
+				light.shadow.camera.right = 2;
+				light.shadow.camera.left = - 2;
+				light.shadow.mapSize.set( 4096, 4096 );
+				scene.add( light );
+
+				group = new THREE.Group();
+				scene.add( group );
+
+				var geometries = [
+					new THREE.BoxBufferGeometry( 1, 1, 0.2 )
+				];
+
+
+
+					var geometry = geometries[ 0 ];
+					var material = new THREE.MeshStandardMaterial( {
+						color: 0xffffff,
+						roughness: 0.7,
+						metalness: 0.0
+					} );
+
+					var object = new THREE.Mesh( geometry, material );
+
+					object.position.x = 0;
+					object.position.y = 1;
+					object.position.z = -1;
+
+/*
+					object.rotation.x = Math.random() * 2 * Math.PI;
+					object.rotation.y = Math.random() * 2 * Math.PI;
+					object.rotation.z = Math.random() * 2 * Math.PI;*/
+
+					object.scale.setScalar( 0.5 );
+
+					object.castShadow = true;
+					object.receiveShadow = true;
+
+					texture = new THREE.CanvasTexture(createCanvas());
+
+					const plane = new THREE.Mesh( new THREE.PlaneGeometry( 1, 1 ),
+						new THREE.MeshStandardMaterial( {
+								//color: 0xffffff,
+								//side: THREE.DoubleSide,
+								map: texture } ) );
+					object.add( plane );
+
+					//plane.position.x = 0.4
+					//plane.position.y = 0.4
+					plane.position.z = 0.12
+
+					group.add( object );
+
+
+				//
+
+				renderer = new THREE.WebGLRenderer( { antialias: true } );
+				renderer.setPixelRatio( window.devicePixelRatio );
+				renderer.setSize( window.innerWidth, window.innerHeight );
+				renderer.outputEncoding = THREE.sRGBEncoding;
+				renderer.shadowMap.enabled = true;
+				renderer.xr.enabled = true;
+				container.appendChild( renderer.domElement );
+
+				document.body.appendChild( VRButton.createButton( renderer ) );
+
+				// controllers
+
+				controller1 = renderer.xr.getController( 0 );
+				controller1.addEventListener( 'selectstart', onSelectStart );
+				//controller1.addEventListener( 'selectend', onSelectEnd );
+				controller1.addEventListener( 'squeezestart', onSqueezeStart );
+				controller1.addEventListener( 'squeezeend', onSqueezeEnd );
+				scene.add( controller1 );
+
+				controller2 = renderer.xr.getController( 1 );
+				controller2.addEventListener( 'squeezestart', onSqueezeStart );
+				controller2.addEventListener( 'squeezeend', onSqueezeEnd );
+				scene.add( controller2 );
+
+				//
+
+				var geometry = new THREE.BufferGeometry().setFromPoints( [ new THREE.Vector3( 0, 0, 0 ), new THREE.Vector3( 0, 0, - 1 ) ] );
+
+				var line = new THREE.Line( geometry );
+				line.name = 'line';
+				line.scale.z = 5;
+
+				controller1.add( line.clone() );
+				controller2.add( line.clone() );
+
+				raycaster = new THREE.Raycaster();
+
+				//
+
+				window.addEventListener( 'resize', onWindowResize, false );
+
+			}
+
+			function onWindowResize() {
+
+				camera.aspect = window.innerWidth / window.innerHeight;
+				camera.updateProjectionMatrix();
+
+				renderer.setSize( window.innerWidth, window.innerHeight );
+
+			}
+
+
+			function onSelectStart(event) {
+				var controller = event.target;
+				 var intersections = getIntersections( controller );
+			}
+
+			function onSqueezeStart( event ) {
+
+				var controller = event.target;
+
+				var intersections = getIntersections( controller );
+
+				if ( intersections.length > 0 ) {
+
+					var intersection = intersections[ 0 ];
+
+					tempMatrix.getInverse( controller.matrixWorld );
+
+					var object = intersection.object;
+					object.matrix.premultiply( tempMatrix );
+					object.matrix.decompose( object.position, object.quaternion, object.scale );
+					object.material.emissive.b = 1;
+					controller.add( object );
+
+					controller.userData.selected = object;
+
+				}
+
+			}
+
+			function onSqueezeEnd( event ) {
+
+				var controller = event.target;
+
+				if ( controller.userData.selected !== undefined ) {
+
+					var object = controller.userData.selected;
+					object.matrix.premultiply( controller.matrixWorld );
+					object.matrix.decompose( object.position, object.quaternion, object.scale );
+					object.material.emissive.b = 0;
+					group.add( object );
+
+					controller.userData.selected = undefined;
+
+				}
+
+
+			}
+
+			function getIntersections( controller ) {
+
+				tempMatrix.identity().extractRotation( controller.matrixWorld );
+
+				raycaster.ray.origin.setFromMatrixPosition( controller.matrixWorld );
+				raycaster.ray.direction.set( 0, 0, - 1 ).applyMatrix4( tempMatrix );
+
+				return raycaster.intersectObjects( group.children );
+
+			}
+
+			function intersectObjects( controller ) {
+
+				// Do not highlight when already selected
+
+				if ( controller.userData.selected !== undefined ) return;
+
+				var line = controller.getObjectByName( 'line' );
+				var intersections = getIntersections( controller );
+
+				if ( intersections.length > 0 ) {
+
+					var intersection = intersections[ 0 ];
+
+					var object = intersection.object;
+					object.material.emissive.r = 1;
+					intersected.push( object );
+
+					line.scale.z = intersection.distance;
+
+				} else {
+
+					line.scale.z = 5;
+
+				}
+
+			}
+
+			function cleanIntersected() {
+
+				while ( intersected.length ) {
+
+					var object = intersected.pop();
+					object.material.emissive.r = 0;
+
+				}
+
+			}
+
+			//
+
+			function animate() {
+
+				renderer.setAnimationLoop( render );
+
+			}
+
+			function render() {
+
+				cleanIntersected();
+
+				intersectObjects( controller1 );
+				intersectObjects( controller2 );
+
+				renderer.render( scene, camera );
+
+			}
+
+		</script>
+	</body>
+</html>
